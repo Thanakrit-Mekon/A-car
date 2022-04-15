@@ -1,0 +1,2 @@
+# A-car
+A car is an embedded project. It's a game that requires four players. Each player has a remote control that has forward and reverse buttons with an LED indicator. Each remote control is capable of controlling a wheel. The objective is to reach the finish line without colliding with the obstacle. The car's body is attached to tracking IR sensors and an LDR sensor to determine whether the game status is losing or winning
