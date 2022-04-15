@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>A Car</title>
+    <style>
+    	* { margin: 0; padding: 0; box-sizing: border-box; font-family: monospace }
+      button { padding: 8px 16px; }
+    	#stream {
+      	width: 640px;
+        height: 480px;
+      }
+      #app { display: flex; justify-content: space-evenly; }
+      .text-center { text-align: center }
+      .mt { margin-top: 16px; }
+      .hide { display: none; }
+    </style>
+</head>
+<body>
+<div id="app" class="mt">
+  <div class="text-center">
+      <h1>A Car</h1>
+
+      <h2 id="title-ingame">Game Start: <span id="gametime">0</span> sec</h2>
+      <h2 id="title-gameover">Gameover</h2>
+      <h2 id="title-starter">Push button to Start</h2>
+      <h2 id="title-finish">Win!, Using <span id="final-gametime">0</span> sec</h2>
+
+      <img class="mt" id="stream" src=""><br>
+
+      <button class="mt" id="restart" onclick="restartGame();">Restart Game</button>
+  </div>
+
+  <div>
+      <h1>Onboard Status</h1>
+      <h3 class="mt">Connected client : <span id="cnt-client">0</span></h3>
+
+      <div class="mt">
+          <h3>Front</h3>
+          <p>- Left : <span id="wheel-0">Stop</span></p>
+          <p>- Right : <span id="wheel-1">Stop</span></p>
+      </div>
+
+      <div class="mt">
+          <h3>Rear</h3>
+          <p>- Left : <span id="wheel-2">Stop</span></p>
+          <p>- Right : <span id="wheel-3">Stop</span></p>
+      </div>
+
+      <h3 class="mt">Uptime : <span id="uptime">0</span> sec</h3>
+
+      <button class="mt" onclick="readOnboardStatus()">Update</button>
+  </div>
+</div>
+<script>
+  var baseHost = document.location.origin;
+  var streamUrl = baseHost + ':81';
+  var finalGametime = 0;
+
+  function updateWheelStatus(status) {
+    STATUS_TEXT = { 0: "Stop", 1: "Forward", 2: "Backward" };
+    for (let i = 0; i < 4; i++) {
+      let ele = document.getElementById(`wheel-${i}`);
+      ele.innerText = STATUS_TEXT[status[i]];
+    }
+  }
+
+  function updateCntClient(cntClient) {
+    let ele = document.getElementById('cnt-client');
+    ele.innerText = cntClient;
+  }
+
+  function hideElement(id) {
+    let ele = document.getElementById(id);
+    ele.classList.add('hide');
+  }
+
+  function showElement(id) {
+    let ele = document.getElementById(id);
+    ele.classList.remove('hide');
+  }
+
+  let titleIds = ['title-ingame', 'title-gameover', 'title-starter', 'title-finish', 'restart'];
+  function updateGameTitleStatus(status) {
+    // hide all element
+    titleIds.forEach((id) => hideElement(id));
+
+    if (status == 0) {
+      // show starter
+      showElement('title-starter');
+    } else if (status == 1) {
+      // show ingame
+      showElement('title-ingame');
+      showElement('restart');
+    } else if (status == 2) {
+      // show gameover
+      showElement('title-gameover');
+      showElement('restart');
+    } else if (status == 3) {
+      // show finish
+      showElement('title-finish');
+      showElement('restart');
+    }
+  }
+
+  function updateUptime(uptime = 0) {
+    let ele = document.getElementById('uptime');
+    ele.innerText = (uptime / 1000).toFixed(2);
+  }
+
+  function updateStreamImg() {
+    let ele = document.getElementById('stream');
+    ele.src = `${streamUrl}/stream`;
+  }
+
+  function updateGametime(gametime = 0) {
+    let ele = document.getElementById('gametime');
+    ele.innerText = (gametime / 1000).toFixed(2);
+  }
+
+  function updateFinalGametime() {
+    let ele = document.getElementById('final-gametime');
+    ele.innerText = (finalGametime / 1000).toFixed(2);
+  }
+
+  // =============================================================================================
+
+  async function readOnboardStatus() {
+    fetch(`/status`)
+      .then(function (response) {
+        return response.json()
+      })
+      .then(function (status) {
+        updateCntClient(status.cntClient);
+        updateWheelStatus(status.wheelStatus)
+        updateGameTitleStatus(status.gameStatus);
+        updateUptime(status.uptime);
+        updateGametime(status.gametime);
+        if (status.gameStatus == 3 && finalGametime == 0) {
+          finalGametime = status.gametime;
+          updateFinalGametime();
+        } 
+      });
+  }
+
+  async function restartGame() {
+    finalGametime = 0;
+    fetch(`/restart_game`)
+      .then(function (response) {
+        readOnboardStatus();
+        return response.json();
+      });
+
+    fetch(`/restart_game`)
+      .then(function (response) {
+        readOnboardStatus();
+        return response.json();
+      });
+  }
+
+  let updateService;
+  function startUpdateStatusService() {
+    if (updateService) return;
+    updateService = setInterval(readOnboardStatus, 500);
+  }
+
+  async function setup() {
+    titleIds.forEach((id) => hideElement(id));
+    showElement('title-starter');
+    // readOnboardStatus();
+    startUpdateStatusService();
+    updateStreamImg();
+  }
+
+  setup();
+</script>
+</body>
+</html>
